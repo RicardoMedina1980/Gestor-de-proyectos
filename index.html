@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión de Tareas - Diagrama de Red AON/AOA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #1a1a2e;
+            --bg-panel: #16213e;
+            --bg-info: #0f3460;
+            --text-primary: #eeeeee;
+            --text-secondary: #cccccc;
+            --border-color: #0f3460;
+            --accent-primary: #e94560;
+            --accent-secondary: #4a90e2;
+            --accent-success: #00ff88;
+            --accent-dummy: #87ceeb;
+            --table-header-bg: #0f3460;
+            --table-header-text: #e94560;
+            --table-row-even: #1a1a2e;
+            --node-bg: #16213e;
+            --node-start-end-bg: #0f3460;
+            --node-left-bg: #0f3460;
+            --node-right-top-bg: #16213e;
+            --node-right-bottom-bg: #1a1a2e;
+            --editable-bg: rgba(255, 255, 255, 0.05);
+            --legend-bg: rgba(22, 33, 62, 0.92);
+            --tooltip-bg: rgba(22, 33, 62, 0.97);
+            --modal-bg: #16213e;
+            --status-bg: rgba(22, 33, 62, 0.9);
+            --arrow-normal: #ffffff;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f8fafc;
+            --bg-panel: #ffffff;
+            --bg-info: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --border-color: #cbd5e1;
+            --accent-primary: #e94560;
+            --accent-secondary: #2563eb;
+            --accent-success: #059669;
+            --accent-dummy: #0284c7;
+            --table-header-bg: #e2e8f0;
+            --table-header-text: #0f172a;
+            --table-row-even: #f1f5f9;
+            --node-bg: #ffffff;
+            --node-start-end-bg: #f0f9ff;
+            --node-left-bg: #e2e8f0;
+            --node-right-top-bg: #f8fafc;
+            --node-right-bottom-bg: #ffffff;
+            --editable-bg: rgba(0, 0, 0, 0.03);
+            --legend-bg: rgba(255, 255, 255, 0.95);
+            --tooltip-bg: rgba(255, 255, 255, 0.97);
+            --modal-bg: #ffffff;
+            --status-bg: rgba(255, 255, 255, 0.9);
+            --arrow-normal: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            height: 100dvh;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            overflow: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .panel-left { width: 100% !important; height: 50%; border-right: none; border-bottom: 2px solid var(--border-color); }
+            .panel-center { height: 50%; }
+        }
+        body.table-hidden .panel-left { display: none; }
+        body.table-hidden .panel-center { height: 100%; width: 100%; }
+        .panel-left {
+            width: 420px;
+            min-width: 350px;
+            padding: 15px;
+            background: var(--bg-panel);
+            border-right: 2px solid var(--border-color);
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+        .panel-left h2 { color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; }
+        .panel-left h3 { color: var(--accent-secondary); margin: 15px 0 8px 0; font-size: 1em; }
+        .btn-ingresar {
+            background: var(--accent-primary); color: white; border: none;
+            padding: 10px 20px; font-size: 0.95em; font-weight: bold;
+            border-radius: 6px; cursor: pointer; margin-bottom: 12px; width: 100%;
+        }
+        .btn-ingresar:active { background: #ff6b6b; transform: scale(0.97); }
+        .info-box {
+            background: var(--bg-info); border: 1px solid var(--accent-primary); border-radius: 6px;
+            padding: 8px 10px; margin-bottom: 12px; font-size: 0.75em; color: var(--text-secondary); line-height: 1.4;
+        }
+        .info-box strong { color: var(--accent-primary); }
+        .node-diagram {
+            display: inline-block; width: 36px; height: 36px; border-radius: 50%;
+            overflow: hidden; border: 2px solid var(--accent-primary); vertical-align: middle;
+            margin-right: 6px; position: relative;
+        }
+        .node-diagram-left {
+            position: absolute; left: 0; top: 0; width: 50%; height: 100%;
+            background: var(--node-left-bg); display: flex; align-items: center; justify-content: center;
+            color: var(--text-primary); font-weight: bold; font-size: 0.55em; border-right: 1px solid var(--accent-primary);
+        }
+        .node-diagram-right-top {
+            position: absolute; right: 0; top: 0; width: 50%; height: 50%;
+            background: var(--node-right-top-bg); display: flex; align-items: center; justify-content: center;
+            color: #ffd700; font-size: 0.45em; border-bottom: 1px solid var(--accent-primary);
+        }
+        .node-diagram-right-bottom {
+            position: absolute; right: 0; bottom: 0; width: 50%; height: 50%;
+            background: var(--node-right-bottom-bg); display: flex; align-items: center; justify-content: center;
+            color: #00bfff; font-size: 0.45em;
+        }
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 15px; }
+        table { width: 100%; min-width: 320px; border-collapse: collapse; }
+        th, td { padding: 8px 5px; text-align: center; border: 1px solid var(--border-color); vertical-align: middle; font-size: 0.85em; }
+        th { background: var(--table-header-bg); color: var(--table-header-text); font-weight: bold; font-size: 0.8em; position: sticky; top: 0; }
+        tr:nth-child(even) { background: var(--table-row-even); }
+        tr.ficticia-row { background: rgba(135, 206, 235, 0.08) !important; }
+        tr.ficticia-row td { color: var(--accent-dummy); font-style: italic; }
+        .task-cell { font-weight: bold; color: var(--accent-primary); font-size: 1em; }
+        .editable {
+            background: var(--editable-bg); border: 1px dashed transparent;
+            border-radius: 3px; padding: 3px 5px; cursor: text; min-width: 25px; display: inline-block;
+        }
+        .editable:focus { outline: none; border-color: var(--accent-primary); background: var(--bg-body); }
+        .editable-duration { color: #ffd700; font-weight: bold; }
+        .editable-antecedents { color: var(--accent-dummy); }
+        .auto-precedents { color: var(--text-secondary); background: var(--editable-bg); padding: 3px 5px; border-radius: 3px; display: inline-block; }
+        .btn-delete { background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 1.1em; font-weight: bold; line-height: 1; }
+        .btn-delete:hover { background: #cc0000; }
+        .panel-center {
+            flex: 1;
+            position: relative;
+            background: var(--bg-body);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 6px;
+            z-index: 20;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .canvas-btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            font-size: 1.1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .canvas-btn:active { background: var(--accent-primary); transform: scale(0.9); }
+        .canvas-btn.toggle-table, .canvas-btn.time-toggle, .canvas-btn.clear-all, .canvas-btn.center-btn, .canvas-btn.inspect-btn, .canvas-btn.theme-btn, .canvas-btn.dummy-btn, .canvas-btn.excel-btn, .canvas-btn.mode-btn { width: auto; padding: 0 10px; font-size: 0.8em; font-weight: bold; }
+        .canvas-btn.mode-btn { background: #2563eb; border-color: #2563eb; color: white; }
+        .canvas-btn.mode-btn.aoa { background: #ea580c; border-color: #ea580c; }
+        .canvas-btn.clear-all { background: #ff4444; border-color: #ff4444; color: white; }
+        .canvas-btn.clear-all:hover { background: #cc0000; }
+        .canvas-btn.center-btn { background: #4a90e2; border-color: #4a90e2; color: white; }
+        .canvas-btn.center-btn:active { background: #357abd; }
+        .canvas-btn.inspect-btn { background: #9b59b6; border-color: #9b59b6; color: white; }
+        .canvas-btn.inspect-btn:active { background: #8e44ad; }
+        .canvas-btn.inspect-btn.active { background: #e74c3c; border-color: #e74c3c; box-shadow: 0 0 10px rgba(231, 76, 60, 0.6); }
+        .canvas-btn.theme-btn { background: #6366f1; border-color: #6366f1; color: white; }
+        .canvas-btn.theme-btn:active { background: #4f46e5; }
+        .canvas-btn.dummy-btn { background: #f59e0b; border-color: #f59e0b; color: white; }
+        .canvas-btn.dummy-btn:active { background: #d97706; }
+        .canvas-btn.dummy-btn.disabled { background: #475569; border-color: #475569; color: #94a3b8; opacity: 0.6; cursor: not-allowed; }
+        .canvas-btn.excel-btn { background: #10b981; border-color: #10b981; color: white; }
+        .canvas-btn.excel-btn:active { background: #059669; }
+        .status-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--status-bg);
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.75em;
+            z-index: 20;
+            color: var(--accent-success);
+        }
+        #canvas-viewport {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            touch-action: none;
+            background: var(--bg-body);
+        }
+        #canvas-viewport:active { cursor: grabbing; }
+        #canvas-viewport.inspect-mode { cursor: zoom-in; }
+        #canvas-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            width: 3000px;
+            height: 3000px;
+        }
+        #svg-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: move;
+            z-index: 5;
+            user-select: none;
+            border: 2px solid var(--accent-primary);
+            background: var(--node-bg);
+            touch-action: none;
+            transition: box-shadow 0.2s ease, background 0.3s ease;
+        }
+        .node.critical { border-color: #ff4444; box-shadow: 0 0 10px rgba(255, 68, 68, 0.4); }
+        .node.start-node { border-color: var(--accent-success); background: var(--node-start-end-bg); }
+        .node.end-node { border-color: #ffd700; background: var(--node-start-end-bg); }
+        .node.inspect-hover { box-shadow: 0 0 20px rgba(233, 69, 96, 0.8) !important; z-index: 10; }
+        .node-left {
+            position: absolute; left: 0; top: 0; width: 50%; height: 100%;
+            background: var(--node-left-bg); display: flex; align-items: center; justify-content: center;
+            border-right: 2px solid var(--accent-primary);
+        }
+        .node-right-top {
+            position: absolute; right: 0; top: 0; width: 50%; height: 50%;
+            background: var(--node-right-top-bg); display: flex; align-items: center; justify-content: center; flex-direction: column;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+        .node-right-bottom {
+            position: absolute; right: 0; bottom: 0; width: 50%; height: 50%;
+            background: var(--node-right-bottom-bg); display: flex; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .node-id { font-size: 1.2em; font-weight: bold; color: var(--text-primary); }
+        .node-te-val { font-size: 1.1em; font-weight: bold; color: #ffd700; }
+        .node-te-label { font-size: 0.5em; color: var(--text-secondary); }
+        .node-tl-val { font-size: 1.1em; font-weight: bold; color: #00bfff; }
+        .node-tl-label { font-size: 0.5em; color: var(--text-secondary); }
+        .arrow-line { stroke: var(--arrow-normal); stroke-width: 2; marker-end: url(#arrowhead); }
+        .arrow-line.critical { stroke: #ff4444; stroke-width: 3; marker-end: url(#arrowhead-critical); }
+        .arrow-line.dummy { stroke: #888; stroke-width: 1.5; stroke-dasharray: 5,5; marker-end: url(#arrowhead-dummy); }
+        .arrow-label-duration { font-size: 20px; font-weight: bold; fill: #ffd700; text-anchor: middle; pointer-events: none; }
+        .arrow-label-activity { font-size: 20px; font-weight: bold; fill: var(--text-primary); text-anchor: middle; pointer-events: none; }
+        .arrow-label-es-ls { font-size: 14px; fill: var(--accent-success); text-anchor: middle; pointer-events: none; font-weight: bold; }
+        .legend {
+            position: absolute; bottom: 10px; left: 10px;
+            background: var(--legend-bg); padding: 8px 10px;
+            border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.7em; z-index: 20;
+            color: var(--text-primary);
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+        .legend-color { width: 16px; height: 3px; flex-shrink: 0; }
+        .tooltip-box {
+            position: fixed;
+            background: var(--tooltip-bg);
+            border: 2px solid var(--accent-primary);
+            border-radius: 10px;
+            padding: 14px 18px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            z-index: 2000;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 320px;
+            line-height: 1.6;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.2s ease;
+            display: none;
+        }
+        .tooltip-box strong { color: var(--accent-primary); font-size: 1.1em; display: block; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+        .tooltip-box .highlight { color: #ffd700; font-weight: bold; }
+        .tooltip-box .critical-text { color: #ff4444; font-weight: bold; }
+        .tooltip-box .dummy-text { color: var(--accent-dummy); font-style: italic; }
+        .tooltip-box .success-text { color: var(--accent-success); font-weight: bold; }
+        .tooltip-box .tl-text { color: #00bfff; font-weight: bold; }
+        .tooltip-box .row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .tooltip-box .label { color: var(--text-secondary); }
+        .tooltip-box .calc-box { background: rgba(233, 69, 96, 0.15); padding: 5px 8px; border-radius: 4px; margin: 3px 0; font-family: monospace; }
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 15px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--modal-bg); border: 2px solid var(--accent-primary); border-radius: 10px;
+            padding: 20px; width: 100%; max-width: 360px;
+        }
+        .modal h3 { color: var(--accent-primary); margin-bottom: 15px; font-size: 1.1em; }
+        .modal label { display: block; margin-bottom: 4px; color: var(--text-secondary); font-size: 0.85em; }
+        .modal input {
+            width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid var(--border-color);
+            border-radius: 6px; background: var(--bg-body); color: var(--text-primary); font-size: 1em;
+        }
+        .modal input:focus { outline: none; border-color: var(--accent-primary); }
+        .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 5px; }
+        .modal-buttons button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: bold; }
+        .btn-confirm { background: var(--accent-primary); color: white; }
+        .btn-cancel { background: #555; color: white; }
+        .hint-text { font-size: 0.7em; color: var(--text-secondary); margin-top: -8px; margin-bottom: 12px; }
+        
+        @media print {
+            :root {
+                --bg-body: #ffffff !important;
+                --bg-panel: #ffffff !important;
+                --bg-info: #f8fafc !important;
+                --text-primary: #000000 !important;
+                --text-secondary: #334155 !important;
+                --border-color: #cbd5e1 !important;
+                --table-header-bg: #e2e8f0 !important;
+                --table-header-text: #0f172a !important;
+                --table-row-even: #f1f5f9 !important;
+                --node-bg: #ffffff !important;
+                --node-start-end-bg: #f0f9ff !important;
+                --node-left-bg: #e2e8f0 !important;
+                --node-right-top-bg: #f8fafc !important;
+                --node-right-bottom-bg: #ffffff !important;
+                --editable-bg: transparent !important;
+                --arrow-normal: #334155 !important;
+                --legend-bg: #ffffff !important;
+                --tooltip-bg: #ffffff !important;
+                --modal-bg: #ffffff !important;
+                --status-bg: #f8fafc !important;
+            }
+            body { background: var(--bg-body) !important; color: var(--text-primary) !important; height: auto !important; overflow: visible !important; display: block !important; }
+            .panel-left { width: 100% !important; height: auto !important; border: none !important; overflow: visible !important; background: var(--bg-panel) !important; }
+            .panel-center { height: auto !important; overflow: visible !important; background: var(--bg-body) !important; page-break-before: always; }
+            .canvas-controls, .btn-ingresar, .btn-delete, .modal-overlay, .status-bar, .tooltip-box { display: none !important; }
+            #canvas-viewport { overflow: visible !important; cursor: default !important; height: auto !important; }
+            #canvas-content { transform: none !important; width: 100% !important; height: auto !important; position: relative !important; }
+            .node { border: 2px solid #333 !important; background: var(--node-bg) !important; }
+            .node-left { background: var(--node-left-bg) !important; border-right: 2px solid #333 !important; }
+            .node-right-top { background: var(--node-right-top-bg) !important; border-bottom: 2px solid #333 !important; }
+            .node-right-bottom { background: var(--node-right-bottom-bg) !important; }
+            .node-id, .node-te-val, .node-tl-val { color: #000 !important; }
+            .arrow-line { stroke: var(--arrow-normal) !important; }
+            .arrow-line.critical { stroke: #d32f2f !important; }
+            .arrow-label-duration { fill: #d32f2f !important; }
+            .arrow-label-activity { fill: #000 !important; }
+            .legend { background: var(--legend-bg) !important; border: 1px solid #ccc !important; color: #000 !important; }
+            .legend-color { background: #333 !important; }
+            table { border: 1px solid #333 !important; }
+            th, td { border: 1px solid #333 !important; color: #000 !important; }
+            th { background: var(--table-header-bg) !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="panel-left" id="panelLeft">
+        <h2> Tablas de Tareas</h2>
+        <div class="info-box">
+            <strong>Estructura del nodo:</strong><br>
+            <div class="node-diagram">
+                <div class="node-diagram-left">ID</div>
+                <div class="node-diagram-right-top">TE</div>
+                <div class="node-diagram-right-bottom">TL</div>
+            </div>
+            Izq: <strong>ID</strong> | Der-Arriba: <strong>TE</strong> | Der-Abajo: <strong>TL</strong>
+        </div>
+        
+        <button class="btn-ingresar" onclick="openModal()">+ Ingresar Tarea (AON)</button>
+
+        <h3>🔵 Tabla AON (Activity on Node)</h3>
+        <div class="table-container">
+            <table id="tableAON">
+                <thead>
+                    <tr>
+                        <th>Actividad</th>
+                        <th>Duración</th>
+                        <th>Antecedentes</th>
+                        <th>Precedentes</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBodyAON"></tbody>
+            </table>
+        </div>
+
+        <h3>🔶 Tabla AOA (Activity on Arrow)</h3>
+        <div class="table-container">
+            <table id="tableAOA">
+                <thead>
+                    <tr>
+                        <th>Actividad</th>
+                        <th>Nodo Inicial</th>
+                        <th>Nodo Final</th>
+                        <th>Duración</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBodyAOA"></tbody>
+            </table>
+        </div>
+
+        <h3>📊 Tabla de Tiempos y Holguras (AOA)</h3>
+        <div class="info-box">
+            Las actividades ficticias solo muestran nodos y duración 0. ES, LS y Holgura se omiten ("-").
+        </div>
+        <div class="table-container">
+            <table id="tableTimes">
+                <thead>
+                    <tr>
+                        <th>Actividad</th>
+                        <th>Nodo Inicial</th>
+                        <th>Nodo Final</th>
+                        <th>Duración</th>
+                        <th>ES</th>
+                        <th>LS</th>
+                        <th>Holgura</th>
+                        <th>Crítica</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBodyTimes"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel-center" id="panelCenter">
+        <div class="status-bar" id="statusBar">Listo</div>
+
+        <div class="canvas-controls">
+            <button class="canvas-btn toggle-table" onclick="toggleTable()" title="Mostrar/Ocultar Tabla">☰</button>
+            <button class="canvas-btn mode-btn" onclick="toggleDiagramMode()" id="btnMode" title="Cambiar tipo de diagrama">🔵 AON</button>
+            <button class="canvas-btn time-toggle" onclick="toggleTimeUnit()" id="btnTimeUnit" title="Cambiar unidad de tiempo">📅 Días</button>
+            <button class="canvas-btn dummy-btn" onclick="toggleDummies()" id="btnDummies" title="Mostrar/Ocultar Actividades Ficticias">👁️ Mostrar Ficticias</button>
+            <button class="canvas-btn excel-btn" onclick="exportToExcel()" title="Exportar a Excel">📊 Excel</button>
+            <button class="canvas-btn inspect-btn" onclick="toggleInspectMode()" id="btnInspect" title="Modo Inspección">🔍 Inspección</button>
+            <button class="canvas-btn center-btn" onclick="centerDiagram()" title="Centrar diagrama">⊞ Centrar</button>
+            <button class="canvas-btn clear-all" onclick="clearAll()" title="Eliminar todas las tareas">🗑️ Limpiar Todo</button>
+            <button class="canvas-btn" onclick="zoomOut()" title="Alejar">−</button>
+            <button class="canvas-btn" onclick="resetZoom()" title="Reset zoom">⟲</button>
+            <button class="canvas-btn" onclick="zoomIn()" title="Acercar">+</button>
+            <button class="canvas-btn theme-btn" onclick="toggleTheme()" id="btnTheme" title="Cambiar tema (Oscuro/Claro)">🌓 Tema</button>
+        </div>
+
+        <div id="canvas-viewport">
+            <div id="canvas-content">
+                <svg id="svg-container" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="var(--arrow-normal)" />
+                        </marker>
+                        <marker id="arrowhead-critical" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#ff4444" />
+                        </marker>
+                        <marker id="arrowhead-dummy" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#888" />
+                        </marker>
+                    </defs>
+                    <g id="arrows-group"></g>
+                </svg>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:var(--arrow-normal);"></div><span>Flecha normal</span></div>
+            <div class="legend-item"><div class="legend-color" style="background:#ff4444; height:3px;"></div><span>Ruta crítica</span></div>
+            <div class="legend-item"><div class="legend-color" style="background:#888; border-top: 2px dashed #888; height:0;"></div><span>Ficticia (solo AOA)</span></div>
+            <div class="legend-item"><span style="color:#ffd700;">★ TE (Tiempo Temprano)</span></div>
+            <div class="legend-item"><span style="color:#00bfff;">● TL (Tiempo Tardío)</span></div>
+        </div>
+    </div>
+
+    <div id="infoTooltip" class="tooltip-box"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3>Ingresar Nueva Tarea (AON)</h3>
+            <label>Letra de la Tarea (A-Z):</label>
+            <input type="text" id="taskLetter" maxlength="1" placeholder="Ej: A" inputmode="text">
+            <label>Duración:</label>
+            <input type="text" id="taskDuration" placeholder="Ej: 5 o 5,5" inputmode="decimal">
+            <label>Antecedentes (tareas que deben terminar ANTES):</label>
+            <input type="text" id="taskAntecedents" placeholder="Ej: B,C" inputmode="text">
+            <div class="hint-text">💡 Ejemplo: si D depende de B, en la fila de D poné "B"</div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn-confirm" onclick="addTask()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = [];
+        // Posiciones separadas por modo de diagrama
+        let nodePositions = { AON: {}, AOA: {} };
+        let draggedNode = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        let scale = 1;
+        let panX = 0;
+        let panY = 0;
+        let isPanning = false;
+        let startPanX = 0, startPanY = 0;
+        let initialPinchDistance = 0;
+        let initialScale = 1;
+
+        let timeUnit = 'days';
+        let isInspectMode = false;
+        let showDummies = false;
+        let diagramMode = 'AON'; // 🔵 AON por defecto
+
+        const NODE_RADIUS = 40;
+        const START_NODE_ID = '__START__';
+        const END_NODE_ID = '__END__';
+
+        const tooltip = document.getElementById('infoTooltip');
+        const viewport = document.getElementById('canvas-viewport');
+
+        const STORAGE_KEY = 'cpm_tasks_v10';
+        const STORAGE_POS = 'cpm_nodePositions_v11';
+        const STORAGE_UNIT = 'cpm_timeUnit_v10';
+        const STORAGE_THEME = 'cpm_theme_v10';
+        const STORAGE_DUMMIES = 'cpm_showDummies_v10';
+        const STORAGE_MODE = 'cpm_diagramMode_v11';
+        const STORAGE_SCALE = 'cpm_scale_v10';
+        const STORAGE_PANX = 'cpm_panX_v10';
+        const STORAGE_PANY = 'cpm_panY_v10';
+
+        function pos() { return nodePositions[diagramMode]; }
+
+        function updateDummyButtonUI() {
+            const btn = document.getElementById('btnDummies');
+            if (diagramMode === 'AON') {
+                btn.classList.add('disabled');
+                btn.textContent = '👁️ Ficticias (AOA)';
+                btn.style.background = '#475569';
+                btn.style.color = '#94a3b8';
+            } else {
+                btn.classList.remove('disabled');
+                if (showDummies) {
+                    btn.textContent = '👁️ Ocultar Ficticias';
+                    btn.style.background = '#f59e0b';
+                    btn.style.color = 'white';
+                } else {
+                    btn.textContent = '🚫 Mostrar Ficticias';
+                    btn.style.background = '#64748b';
+                    btn.style.color = '#e2e8f0';
+                }
+            }
+        }
+
+        function updateModeButtonUI() {
+            const btn = document.getElementById('btnMode');
+            if (diagramMode === 'AON') {
+                btn.textContent = '🔵 AON';
+                btn.classList.remove('aoa');
+            } else {
+                btn.textContent = '🟠 AOA';
+                btn.classList.add('aoa');
+            }
+        }
+
+        function toggleDiagramMode() {
+            diagramMode = diagramMode === 'AON' ? 'AOA' : 'AON';
+            updateModeButtonUI();
+            updateDummyButtonUI();
+            localStorage.setItem(STORAGE_MODE, diagramMode);
+            renderNodes();
+            setTimeout(() => centerDiagram(), 50);
+            document.getElementById('statusBar').textContent = diagramMode === 'AON' ? '🔵 Diagrama AON (sin ficticias)' : '🟠 Diagrama AOA (con ficticias)';
+            setTimeout(() => { document.getElementById('statusBar').textContent = 'Listo'; }, 2500);
+        }
+
+        function showTooltip(x, y, html) {
+            tooltip.innerHTML = html;
+            tooltip.style.display = 'block';
+            let left = x + 20;
+            let top = y + 20;
+            const rect = tooltip.getBoundingClientRect();
+            if (left + rect.width > window.innerWidth - 10) left = x - rect.width - 20;
+            if (top + rect.height > window.innerHeight - 10) top = y - rect.height - 20;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            if (newTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
+            localStorage.setItem(STORAGE_THEME, newTheme);
+        }
+
+        function toggleDummies() {
+            if (diagramMode === 'AON') {
+                document.getElementById('statusBar').textContent = 'ℹ️ Las ficticias solo aplican al diagrama AOA';
+                setTimeout(() => { document.getElementById('statusBar').textContent = 'Listo'; }, 2500);
+                return;
+            }
+            showDummies = !showDummies;
+            updateDummyButtonUI();
+            localStorage.setItem(STORAGE_DUMMIES, showDummies);
+            fullUpdate(); 
+        }
+
+        function toggleInspectMode() {
+            isInspectMode = !isInspectMode;
+            const btn = document.getElementById('btnInspect');
+            if (isInspectMode) {
+                btn.classList.add('active');
+                btn.textContent = '🔍 Inspección ON';
+                viewport.classList.add('inspect-mode');
+                document.getElementById('statusBar').textContent = '🔍 Modo Inspección Activo (Esc para salir)';
+                attachInspectListeners();
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '🔍 Inspección';
+                viewport.classList.remove('inspect-mode');
+                document.getElementById('statusBar').textContent = 'Listo';
+                detachInspectListeners();
+                hideTooltip();
+            }
+        }
+
+        function attachInspectListeners() {
+            const nodes = document.querySelectorAll('.node');
+            nodes.forEach(node => {
+                node.addEventListener('mouseenter', handleNodeHover);
+                node.addEventListener('mousemove', handleNodeMove);
+                node.addEventListener('mouseleave', handleNodeLeave);
+            });
+            const arrowGroups = document.querySelectorAll('#arrows-group g');
+            arrowGroups.forEach(g => {
+                g.style.pointerEvents = 'auto';
+                g.addEventListener('mouseenter', handleArrowHover);
+                g.addEventListener('mousemove', handleArrowMove);
+                g.addEventListener('mouseleave', handleArrowLeave);
+            });
+        }
+
+        function detachInspectListeners() {
+            const nodes = document.querySelectorAll('.node');
+            nodes.forEach(node => {
+                node.removeEventListener('mouseenter', handleNodeHover);
+                node.removeEventListener('mousemove', handleNodeMove);
+                node.removeEventListener('mouseleave', handleNodeLeave);
+                node.classList.remove('inspect-hover');
+            });
+            const arrowGroups = document.querySelectorAll('#arrows-group g');
+            arrowGroups.forEach(g => {
+                g.style.pointerEvents = 'none';
+                g.removeEventListener('mouseenter', handleArrowHover);
+                g.removeEventListener('mousemove', handleArrowMove);
+                g.removeEventListener('mouseleave', handleArrowLeave);
+            });
+        }
+
+        function handleNodeHover(e) {
+            const rawId = e.currentTarget.id.replace('node-', '');
+            let html = '';
+            if (rawId === START_NODE_ID) {
+                html = `<strong>🟢 Nodo Inicio</strong>
+                    <div class="row"><span class="label">TE:</span><span class="highlight">0</span></div>
+                    <div class="row"><span class="label">TL:</span><span class="tl-text">0</span></div>
+                    <div class="calc-box">Cálculo: Inicio del proyecto</div>`;
+            } else if (rawId === END_NODE_ID) {
+                let pd = 0;
+                tasks.forEach(t => { if (t.teFin !== undefined) pd = Math.max(pd, t.teFin); });
+                html = `<strong>🟡 Nodo Fin</strong>
+                    <div class="row"><span class="label">TE:</span><span class="highlight">${formatTime(pd)}</span></div>
+                    <div class="row"><span class="label">TL:</span><span class="tl-text">${formatTime(pd)}</span></div>
+                    <div class="calc-box">Máxima duración del proyecto</div>`;
+            } else if (rawId.startsWith('E')) {
+                // Nodo de evento AOA
+                const num = parseInt(rawId.substring(1));
+                const { nodeTE, nodeTL } = getAOAData();
+                const te = nodeTE[num] !== undefined ? nodeTE[num] : 0;
+                const tl = nodeTL[num] !== undefined ? nodeTL[num] : 0;
+                const isCrit = Math.abs(tl - te) < 0.5;
+                html = `<strong>🟠 Evento ${num}</strong>
+                    <div class="row"><span class="label">TE:</span><span class="highlight">${formatTime(te)}</span></div>
+                    <div class="row"><span class="label">TL:</span><span class="tl-text">${formatTime(tl)}</span></div>
+                    <div class="row"><span class="label">Estado:</span><span class="${isCrit ? 'critical-text' : 'success-text'}">${isCrit ? '🔴 En ruta crítica' : '🟢 Normal'}</span></div>`;
+            } else {
+                const task = tasks.find(t => t.letter === rawId);
+                if (task) {
+                    const isCritical = task.isCritical;
+                    const holgura = task.holgura;
+                    let maxCalc = '', minCalc = '';
+                    
+                    if (task.antecedents.length > 0) {
+                        const antValues = task.antecedents.map(ant => {
+                            const antTask = tasks.find(t => t.letter === ant);
+                            return (antTask && !isNaN(antTask.teFin)) ? formatTime(antTask.teFin) : '0';
+                        });
+                        const rawValues = task.antecedents.map(ant => {
+                            const antTask = tasks.find(t => t.letter === ant);
+                            return (antTask && !isNaN(antTask.teFin)) ? antTask.teFin : 0;
+                        });
+                        const maxVal = Math.max(...rawValues);
+                        maxCalc = `<div class="calc-box" style="color: #ff4444;">TE = Max(${antValues.join(', ')}) = <span class="highlight">${formatTime(maxVal)}</span></div>`;
+                    }
+                    
+                    if (task.precedents.length > 0) {
+                        const sucValues = task.precedents.map(suc => {
+                            const sucTask = tasks.find(t => t.letter === suc);
+                            const val = (sucTask && !isNaN(sucTask.tlFin)) ? (sucTask.tlFin - sucTask.duration) : (task.tlFin || 0);
+                            return formatTime(val);
+                        });
+                        const rawValues = task.precedents.map(suc => {
+                            const sucTask = tasks.find(t => t.letter === suc);
+                            return (sucTask && !isNaN(sucTask.tlFin)) ? (sucTask.tlFin - sucTask.duration) : (task.tlFin || 0);
+                        });
+                        const minVal = Math.min(...rawValues);
+                        minCalc = `<div class="calc-box" style="color: #00bfff;">TL = Min(${sucValues.join(', ')}) = <span class="tl-text">${formatTime(minVal)}</span></div>`;
+                    }
+                    
+                    html = `<strong>🔵 Actividad ${rawId}</strong>
+                        <div class="row"><span class="label">Duración:</span><span class="highlight">${formatTime(task.duration)} ${getTimeLabel()}</span></div>
+                        <div class="row"><span class="label">ES (Inicio Temp.):</span><span class="highlight">${formatTime(task.te)}</span></div>
+                        <div class="row"><span class="label">LS (Inicio Tard.):</span><span class="tl-text">${formatTime(task.tl)}</span></div>
+                        <div class="row"><span class="label">Holgura (LS-ES):</span><span class="${isCritical ? 'critical-text' : 'success-text'}">${formatTime(holgura)} ${getTimeLabel()}</span></div>
+                        <div class="row"><span class="label">Estado:</span><span class="${isCritical ? 'critical-text' : ''}">${isCritical ? '🔴 CRÍTICA' : '🟢 Normal'}</span></div>
+                        ${maxCalc}
+                        ${minCalc}
+                        ${task.antecedents.length > 0 ? `<div class="row"><span class="label">Antecedentes:</span><span>${task.antecedents.join(', ')}</span></div>` : ''}
+                        ${task.precedents.length > 0 ? `<div class="row"><span class="label">Precedentes:</span><span>${task.precedents.join(', ')}</span></div>` : ''}`;
+                }
+            }
+            showTooltip(e.clientX, e.clientY, html);
+            e.currentTarget.classList.add('inspect-hover');
+        }
+
+        function handleNodeMove(e) { showTooltip(e.clientX, e.clientY, tooltip.innerHTML); }
+        function handleNodeLeave(e) { hideTooltip(); e.currentTarget.classList.remove('inspect-hover'); }
+
+        function handleArrowHover(e) {
+            const g = e.currentTarget;
+            const line = g.querySelector('line:not([stroke="transparent"])');
+            if (!line) return;
+            const isCritical = line.classList.contains('critical');
+            const isDummy = line.classList.contains('dummy');
+            const durationLabel = g.querySelector('.arrow-label-duration');
+            const activityLabel = g.querySelector('.arrow-label-activity');
+            const duration = durationLabel ? durationLabel.textContent : '0';
+            const activity = activityLabel ? activityLabel.textContent : '';
+            let typeText = '', typeClass = '';
+            if (isCritical) { typeText = '🔴 Ruta Crítica'; typeClass = 'critical-text'; }
+            else if (isDummy) { typeText = '⚪ Actividad Ficticia'; typeClass = 'dummy-text'; }
+            else { typeText = '🟢 Dependencia'; typeClass = 'success-text'; }
+            let html = `<strong>➡️ ${activity ? 'Actividad ' + activity : 'Ficticia'}</strong>
+                <div class="row"><span class="label">Tipo:</span><span class="${typeClass}">${typeText}</span></div>`;
+            if (activity && activity !== 'Ficticia') {
+                const task = tasks.find(t => t.letter === activity);
+                if (task) {
+                    html += `<div class="row"><span class="label">Duración:</span><span class="highlight">${formatTime(task.duration)} ${getTimeLabel()}</span></div>
+                             <div class="row"><span class="label">ES:</span><span>${formatTime(task.te)}</span></div>
+                             <div class="row"><span class="label">LS:</span><span>${formatTime(task.tl)}</span></div>
+                             <div class="row"><span class="label">Holgura:</span><span class="${task.isCritical ? 'critical-text' : 'success-text'}">${formatTime(task.holgura)}</span></div>`;
+                }
+            }
+            showTooltip(e.clientX, e.clientY, html);
+            line.style.strokeWidth = isCritical ? '5' : (isDummy ? '3' : '4');
+        }
+        function handleArrowMove(e) { showTooltip(e.clientX, e.clientY, tooltip.innerHTML); }
+        function handleArrowLeave(e) {
+            hideTooltip();
+            const g = e.currentTarget;
+            const line = g.querySelector('line:not([stroke="transparent"])');
+            if (line) {
+                const isCritical = line.classList.contains('critical');
+                const isDummy = line.classList.contains('dummy');
+                line.style.strokeWidth = isCritical ? '3' : (isDummy ? '1.5' : '2');
+            }
+        }
+
+        function saveData() {
+            try {
+                const cleanTasks = tasks.map(t => ({
+                    letter: t.letter, duration: t.duration, antecedents: [...t.antecedents], precedents: [...t.precedents]
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanTasks));
+                localStorage.setItem(STORAGE_POS, JSON.stringify(nodePositions));
+                localStorage.setItem(STORAGE_UNIT, timeUnit);
+                localStorage.setItem(STORAGE_DUMMIES, showDummies);
+                localStorage.setItem(STORAGE_MODE, diagramMode);
+                localStorage.setItem(STORAGE_SCALE, scale);
+                localStorage.setItem(STORAGE_PANX, panX);
+                localStorage.setItem(STORAGE_PANY, panY);
+            } catch (e) { console.warn('No se pudo guardar', e); }
+        }
+
+        function loadData() {
+            try {
+                const savedTasks = localStorage.getItem(STORAGE_KEY);
+                const savedPositions = localStorage.getItem(STORAGE_POS);
+                const savedTimeUnit = localStorage.getItem(STORAGE_UNIT);
+                const savedTheme = localStorage.getItem(STORAGE_THEME);
+                const savedDummies = localStorage.getItem(STORAGE_DUMMIES);
+                const savedMode = localStorage.getItem(STORAGE_MODE);
+                const savedScale = localStorage.getItem(STORAGE_SCALE);
+                const savedPanX = localStorage.getItem(STORAGE_PANX);
+                const savedPanY = localStorage.getItem(STORAGE_PANY);
+                
+                if (savedTheme === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+                if (savedDummies !== null) showDummies = savedDummies === 'true';
+                if (savedMode === 'AOA' || savedMode === 'AON') diagramMode = savedMode;
+                updateModeButtonUI();
+                updateDummyButtonUI();
+                
+                if (savedTasks) {
+                    const rawTasks = JSON.parse(savedTasks);
+                    tasks = rawTasks.map(t => ({
+                        letter: t.letter, duration: t.duration, antecedents: t.antecedents || [], precedents: t.precedents || [],
+                        te: 0, tl: 0, teFin: 0, tlFin: 0, holgura: null, isCritical: false
+                    }));
+                    if (savedPositions) {
+                        const parsed = JSON.parse(savedPositions);
+                        if (parsed.AON || parsed.AOA) {
+                            nodePositions = { AON: parsed.AON || {}, AOA: parsed.AOA || {} };
+                        } else {
+                            // Migración de formato antiguo (plano) -> lo tratamos como AOA
+                            nodePositions = { AON: {}, AOA: parsed };
+                        }
+                    }
+                    timeUnit = savedTimeUnit || 'days';
+                    scale = savedScale ? parseFloat(savedScale) : 1;
+                    panX = savedPanX ? parseFloat(savedPanX) : 0;
+                    panY = savedPanY ? parseFloat(savedPanY) : 0;
+                    if (timeUnit === 'weeks') document.getElementById('btnTimeUnit').textContent = '📅 Semanas';
+                    updateTransform();
+                    fullUpdate();
+                    return true;
+                }
+            } catch (e) { console.warn('No se pudo cargar', e); }
+            return false;
+        }
+
+        function toggleTable() {
+            document.body.classList.toggle('table-hidden');
+            setTimeout(() => { centerDiagram(); renderNodes(); }, 350);
+        }
+        function toggleTimeUnit() {
+            timeUnit = timeUnit === 'days' ? 'weeks' : 'days';
+            document.getElementById('btnTimeUnit').textContent = timeUnit === 'weeks' ? '📅 Semanas' : '📅 Días';
+            fullUpdate();
+            saveData();
+        }
+        
+        function clearAll() {
+            if (tasks.length === 0) { alert('No hay tareas para eliminar.'); return; }
+            if (confirm('⚠️ ¿Estás seguro de que quieres ELIMINAR TODAS las tareas y reiniciar el diagrama?')) {
+                tasks = []; 
+                nodePositions = { AON: {}, AOA: {} }; 
+                scale = 1; 
+                panX = 0; 
+                panY = 0;
+                updateTransform(); 
+                saveData(); 
+                fullUpdate();
+                document.getElementById('statusBar').textContent = '🗑️ Todo eliminado';
+                setTimeout(() => { document.getElementById('statusBar').textContent = 'Listo'; }, 2000);
+            }
+        }
+
+        function centerDiagram() {
+            if (tasks.length === 0) { scale = 1; panX = 0; panY = 0; updateTransform(); return; }
+            const viewportWidth = viewport.clientWidth;
+            const viewportHeight = viewport.clientHeight;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            Object.values(pos()).forEach(p => {
+                if (!p) return;
+                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+            });
+            if (minX === Infinity) return;
+            const margin = 100;
+            minX -= margin; maxX += margin; minY -= margin; maxY += margin;
+            const diagramWidth = maxX - minX;
+            const diagramHeight = maxY - minY;
+            const scaleX = viewportWidth / diagramWidth;
+            const scaleY = viewportHeight / diagramHeight;
+            scale = Math.min(scaleX, scaleY, 1.2);
+            panX = (viewportWidth - diagramWidth * scale) / 2 - minX * scale;
+            panY = (viewportHeight - diagramHeight * scale) / 2 - minY * scale;
+            updateTransform();
+            saveData();
+        }
+
+        function exportToExcel() {
+            if (tasks.length === 0) { alert('No hay datos para exportar.'); return; }
+            
+            const nodeMap = buildNodeMap();
+            const wb = XLSX.utils.book_new();
+            
+            const aonData = tasks.map(t => {
+                const mapping = nodeMap[t.letter];
+                return {
+                    'Actividad': t.letter,
+                    'Nodo Inicial': mapping ? mapping.start : '-',
+                    'Nodo Final': mapping ? mapping.end : '-',
+                    'Duración': t.duration,
+                    'Antecedentes': t.antecedents.join(', ') || '-',
+                    'Precedentes': t.precedents.join(', ') || '-',
+                    'ES': formatTime(t.te),
+                    'LS': formatTime(t.tl),
+                    'Holgura': formatTime(t.holgura),
+                    'Crítica': t.isCritical ? 'Sí' : 'No'
+                };
+            });
+            const wsAON = XLSX.utils.json_to_sheet(aonData);
+            XLSX.utils.book_append_sheet(wb, wsAON, "AON");
+
+            const { aoaActivities } = getAOAData();
+            const aoaData = aoaActivities
+                .filter(act => showDummies || act.type !== 'ficticia')
+                .map(act => ({
+                    'Actividad': act.type === 'ficticia' ? `Ficticia (${act.id})` : act.id,
+                    'Tipo': act.type === 'ficticia' ? 'Ficticia' : 'Real',
+                    'Nodo Inicial': act.start,
+                    'Nodo Final': act.end,
+                    'Duración': act.duration
+                }));
+            const wsAOA = XLSX.utils.json_to_sheet(aoaData);
+            XLSX.utils.book_append_sheet(wb, wsAOA, "AOA");
+
+            const timesData = aoaActivities
+                .filter(act => showDummies || act.type !== 'ficticia')
+                .map(act => {
+                    if (act.type === 'ficticia') {
+                        return {
+                            'Actividad': `Ficticia (${act.id})`,
+                            'Nodo Inicial': act.start,
+                            'Nodo Final': act.end,
+                            'Duración': 0,
+                            'ES': '-',
+                            'LS': '-',
+                            'Holgura': '-',
+                            'Crítica': '-'
+                        };
+                    }
+                    return {
+                        'Actividad': act.id,
+                        'Nodo Inicial': act.start,
+                        'Nodo Final': act.end,
+                        'Duración': act.duration,
+                        'ES': formatTime(act.ES),
+                        'LS': formatTime(act.LS),
+                        'Holgura': formatTime(act.Holgura),
+                        'Crítica': act.isCritical ? 'Sí' : 'No'
+                    };
+                });
+            const wsTimes = XLSX.utils.json_to_sheet(timesData);
+            XLSX.utils.book_append_sheet(wb, wsTimes, "Tiempos y Holguras");
+
+            XLSX.writeFile(wb, "Diagrama_de_Red_CPM.xlsx");
+            
+            document.getElementById('statusBar').textContent = '✅ Excel descargado';
+            setTimeout(() => { document.getElementById('statusBar').textContent = 'Listo'; }, 2000);
+        }
+
+        function formatTime(value) {
+            if (value === '-' || value === '' || value === null || value === undefined || isNaN(value)) return '0';
+            const num = parseFloat(value);
+            if (isNaN(num)) return '0';
+            if (timeUnit === 'weeks') {
+                const weeks = num / 7;
+                return weeks % 1 === 0 ? weeks.toString() : weeks.toFixed(1);
+            }
+            return num % 1 === 0 ? num.toString() : num.toFixed(1);
+        }
+        function getTimeLabel() { return timeUnit === 'weeks' ? 'sem' : 'días'; }
+        function updateTransform() {
+            document.getElementById('canvas-content').style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        }
+        function zoomIn() { scale = Math.min(scale + 0.2, 3); updateTransform(); saveData(); }
+        function zoomOut() { scale = Math.max(scale - 0.2, 0.3); updateTransform(); saveData(); }
+        function resetZoom() { centerDiagram(); }
+        function parseLetters(str) {
+            if (!str) return [];
+            const clean = str.toUpperCase().trim();
+            const parts = clean.split(/[,;\s]+/);
+            const letters = [];
+            for (let part of parts) {
+                const matches = part.match(/[A-Z]/g);
+                if (matches) letters.push(...matches);
+            }
+            return [...new Set(letters)];
+        }
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('taskLetter').value = '';
+            document.getElementById('taskDuration').value = '';
+            document.getElementById('taskAntecedents').value = '';
+            setTimeout(() => document.getElementById('taskLetter').focus(), 100);
+        }
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+        function addTask() {
+            const letter = document.getElementById('taskLetter').value.toUpperCase().trim();
+            const durationVal = document.getElementById('taskDuration').value.trim();
+            const antecedentsStr = document.getElementById('taskAntecedents').value;
+            if (!letter || letter.length !== 1 || !/[A-Z]/.test(letter)) { alert('Letra válida (A-Z)'); return; }
+            if (tasks.find(t => t.letter === letter)) { alert('La tarea ' + letter + ' ya existe'); return; }
+            
+            const cleanDuration = durationVal.replace(',', '.');
+            const duration = cleanDuration !== '' && !isNaN(parseFloat(cleanDuration)) ? parseFloat(cleanDuration) : 0;
+            
+            const antecedents = parseLetters(antecedentsStr).filter(p => p !== letter);
+            tasks.push({ letter, duration, antecedents: antecedents, precedents: [], te: 0, tl: 0, teFin: 0, tlFin: 0, holgura: null, isCritical: false });
+            tasks.sort((a, b) => a.letter.localeCompare(b.letter));
+            closeModal();
+            fullUpdate();
+            setTimeout(() => centerDiagram(), 100);
+        }
+        
+        function deleteTask(letter) {
+            const hasDependents = tasks.some(t => t.antecedents.includes(letter));
+            if (hasDependents) { 
+                alert('⚠️ No se puede eliminar la tarea "' + letter + '"\n\nMotivo: Es antecedente de otra tarea.\n\nSolución: Primero elimina o modifica las tareas que dependen de ella.'); 
+                return; 
+            }
+            if (confirm('¿Estás seguro de eliminar la tarea "' + letter + '"?')) {
+                tasks = tasks.filter(t => t.letter !== letter);
+                tasks.forEach(t => { t.antecedents = t.antecedents.filter(a => a !== letter); });
+                fullUpdate();
+                setTimeout(() => centerDiagram(), 100);
+            }
+        }
+
+        function handleDurationChange(letter, value) {
+            const task = tasks.find(t => t.letter === letter);
+            if (!task) return;
+            let cleanValue = value.replace(',', '.');
+            let num = parseFloat(cleanValue);
+            if (isNaN(num) || num < 0) num = 0;
+            if (timeUnit === 'weeks') num = Math.round(num * 7);
+            task.duration = num;
+            fullUpdate();
+        }
+        function handleAntecedentsChange(letter, value) {
+            const task = tasks.find(t => t.letter === letter);
+            if (!task) return;
+            const newAntecedents = parseLetters(value).filter(p => p !== letter);
+            task.antecedents = newAntecedents;
+            fullUpdate();
+        }
+        function calculatePrecedents() {
+            tasks.forEach(t => t.precedents = []);
+            tasks.forEach(task => {
+                task.antecedents.forEach(ant => {
+                    const antTask = tasks.find(t => t.letter === ant);
+                    if (antTask && !antTask.precedents.includes(task.letter)) {
+                        antTask.precedents.push(task.letter);
+                    }
+                });
+            });
+        }
+        function fullUpdate() {
+            calculatePrecedents();
+            calculateCPM();
+            renderTableAON();
+            renderTableAOA();
+            renderTableTimes();
+            renderNodes();
+            document.getElementById('statusBar').textContent = '💾 Guardado';
+            setTimeout(() => { document.getElementById('statusBar').textContent = 'Listo'; }, 1500);
+            saveData();
+        }
+        function renderTableAON() {
+            const tbody = document.getElementById('taskTableBodyAON');
+            tbody.innerHTML = '';
+            const sorted = [...tasks].sort((a, b) => a.letter.localeCompare(b.letter));
+            sorted.forEach(task => {
+                const tr = document.createElement('tr');
+                const tdTask = document.createElement('td');
+                tdTask.className = 'task-cell';
+                tdTask.textContent = task.letter;
+                tr.appendChild(tdTask);
+                const tdDur = document.createElement('td');
+                const durSpan = document.createElement('span');
+                durSpan.className = 'editable editable-duration';
+                durSpan.contentEditable = true;
+                durSpan.textContent = formatTime(task.duration);
+                durSpan.addEventListener('input', (e) => handleDurationChange(task.letter, e.target.textContent));
+                durSpan.addEventListener('blur', (e) => { e.target.textContent = formatTime(task.duration); });
+                tdDur.appendChild(durSpan);
+                tr.appendChild(tdDur);
+                const tdAnt = document.createElement('td');
+                const antSpan = document.createElement('span');
+                antSpan.className = 'editable editable-antecedents';
+                antSpan.contentEditable = true;
+                antSpan.textContent = task.antecedents.join(', ');
+                antSpan.addEventListener('input', (e) => handleAntecedentsChange(task.letter, e.target.textContent));
+                antSpan.addEventListener('blur', (e) => {
+                    const letters = parseLetters(e.target.textContent).filter(p => p !== task.letter);
+                    e.target.textContent = letters.join(', ');
+                });
+                tdAnt.appendChild(antSpan);
+                tr.appendChild(tdAnt);
+                const tdPrec = document.createElement('td');
+                const precSpan = document.createElement('span');
+                precSpan.className = 'auto-precedents';
+                precSpan.textContent = task.precedents.length > 0 ? task.precedents.join(', ') : '-';
+                tdPrec.appendChild(precSpan);
+                tr.appendChild(tdPrec);
+                const tdAct = document.createElement('td');
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn-delete';
+                btnDel.textContent = '🗑️';
+                btnDel.title = 'Eliminar tarea ' + task.letter;
+                btnDel.onclick = (e) => { e.stopPropagation(); deleteTask(task.letter); };
+                tdAct.appendChild(btnDel);
+                tr.appendChild(tdAct);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getAOAData() {
+            const nodeMap = buildNodeMap();
+            const aoaActivities = [];
+            
+            tasks.forEach(task => {
+                const mapping = nodeMap[task.letter];
+                if (mapping) {
+                    aoaActivities.push({
+                        id: task.letter,
+                        type: 'real',
+                        start: mapping.start,
+                        end: mapping.end,
+                        duration: task.duration,
+                        isCritical: task.isCritical
+                    });
+                }
+            });
+            
+            if (nodeMap.__dummies__) {
+                nodeMap.__dummies__.forEach((dummy, index) => {
+                    aoaActivities.push({
+                        id: `F${index + 1}`,
+                        type: 'ficticia',
+                        start: dummy.from,
+                        end: dummy.to,
+                        duration: 0,
+                        isCritical: false
+                    });
+                });
+            }
+            
+            const nodes = new Set();
+            const edges = [];
+            
+            aoaActivities.forEach(act => {
+                nodes.add(act.start);
+                nodes.add(act.end);
+                edges.push({ from: act.start, to: act.end, duration: act.duration, id: act.id });
+            });
+            
+            const nodeArray = Array.from(nodes).sort((a, b) => a - b);
+            const nodeTE = {};
+            const nodeTL = {};
+            
+            nodeArray.forEach(n => { nodeTE[n] = 0; nodeTL[n] = Infinity; });
+            
+            nodeTE[1] = 0;
+            for (let i = 0; i < nodeArray.length; i++) {
+                const u = nodeArray[i];
+                if (nodeTE[u] === undefined) nodeTE[u] = 0;
+                edges.forEach(edge => {
+                    if (edge.from === u) {
+                        const v = edge.to;
+                        if (nodeTE[v] === undefined || nodeTE[v] < nodeTE[u] + edge.duration) {
+                            nodeTE[v] = nodeTE[u] + edge.duration;
+                        }
+                    }
+                });
+            }
+            
+            const lastNode = nodeArray[nodeArray.length - 1];
+            nodeTL[lastNode] = nodeTE[lastNode];
+            for (let i = nodeArray.length - 1; i >= 0; i--) {
+                const v = nodeArray[i];
+                if (nodeTL[v] === Infinity) nodeTL[v] = nodeTL[lastNode];
+                edges.forEach(edge => {
+                    if (edge.to === v) {
+                        const u = edge.from;
+                        const candidateTL = nodeTL[v] - edge.duration;
+                        if (nodeTL[u] === undefined || nodeTL[u] > candidateTL) {
+                            nodeTL[u] = candidateTL;
+                        }
+                    }
+                });
+            }
+            
+            aoaActivities.forEach(act => {
+                act.ES = nodeTE[act.start] !== undefined ? nodeTE[act.start] : 0;
+                act.LS = nodeTL[act.end] !== undefined ? (nodeTL[act.end] - act.duration) : 0;
+                act.Holgura = act.LS - act.ES;
+                act.isCritical = Math.abs(act.Holgura) < 0.5;
+            });
+            
+            aoaActivities.sort((a, b) => {
+                if (a.start !== b.start) return a.start - b.start;
+                return a.end - b.end;
+            });
+            
+            return { aoaActivities, nodeTE, nodeTL };
+        }
+
+        function renderTableAOA() {
+            const tbody = document.getElementById('taskTableBodyAOA');
+            tbody.innerHTML = '';
+            const { aoaActivities } = getAOAData();
+            
+            aoaActivities.forEach(act => {
+                if (act.type === 'ficticia' && !showDummies) return;
+                
+                const tr = document.createElement('tr');
+                if (act.type === 'ficticia') tr.className = 'ficticia-row';
+                
+                const tdTask = document.createElement('td');
+                tdTask.className = 'task-cell';
+                tdTask.textContent = act.type === 'ficticia' ? `Ficticia (${act.id})` : act.id;
+                tr.appendChild(tdTask);
+                
+                const tdStart = document.createElement('td');
+                tdStart.textContent = act.start;
+                tr.appendChild(tdStart);
+                
+                const tdEnd = document.createElement('td');
+                tdEnd.textContent = act.end;
+                tr.appendChild(tdEnd);
+                
+                const tdDur = document.createElement('td');
+                tdDur.textContent = formatTime(act.duration);
+                tr.appendChild(tdDur);
+                
+                const tdAct = document.createElement('td');
+                if (act.type === 'real') {
+                    const btnDel = document.createElement('button');
+                    btnDel.className = 'btn-delete';
+                    btnDel.textContent = '🗑️';
+                    btnDel.title = 'Eliminar tarea ' + act.id;
+                    btnDel.onclick = (e) => { e.stopPropagation(); deleteTask(act.id); };
+                    tdAct.appendChild(btnDel);
+                } else {
+                    tdAct.textContent = '-';
+                    tdAct.style.textAlign = 'center';
+                    tdAct.style.color = '#888';
+                }
+                tr.appendChild(tdAct);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTableTimes() {
+            const tbody = document.getElementById('taskTableBodyTimes');
+            tbody.innerHTML = '';
+            const { aoaActivities } = getAOAData();
+            
+            aoaActivities.forEach(act => {
+                if (act.type === 'ficticia' && !showDummies) return;
+                
+                const tr = document.createElement('tr');
+                if (act.type === 'ficticia') tr.className = 'ficticia-row';
+                if (act.isCritical && act.type === 'real') tr.style.fontWeight = 'bold';
+                
+                const tdTask = document.createElement('td');
+                tdTask.className = 'task-cell';
+                tdTask.textContent = act.id;
+                tr.appendChild(tdTask);
+                
+                const tdStart = document.createElement('td');
+                tdStart.textContent = act.start;
+                tr.appendChild(tdStart);
+                
+                const tdEnd = document.createElement('td');
+                tdEnd.textContent = act.end;
+                tr.appendChild(tdEnd);
+                
+                const tdDur = document.createElement('td');
+                tdDur.textContent = formatTime(act.duration);
+                tr.appendChild(tdDur);
+                
+                const tdES = document.createElement('td');
+                tdES.textContent = act.type === 'ficticia' ? '-' : formatTime(act.ES);
+                tdES.style.color = act.type === 'ficticia' ? '#888' : 'var(--accent-success)';
+                tr.appendChild(tdES);
+                
+                const tdLS = document.createElement('td');
+                tdLS.textContent = act.type === 'ficticia' ? '-' : formatTime(act.LS);
+                tdLS.style.color = act.type === 'ficticia' ? '#888' : '#00bfff';
+                tr.appendChild(tdLS);
+                
+                const tdHolgura = document.createElement('td');
+                tdHolgura.textContent = act.type === 'ficticia' ? '-' : formatTime(act.Holgura);
+                tdHolgura.style.color = act.type === 'ficticia' ? '#888' : (act.isCritical ? '#ff4444' : '#ffd700');
+                tr.appendChild(tdHolgura);
+                
+                const tdCrit = document.createElement('td');
+                tdCrit.textContent = act.type === 'ficticia' ? '-' : (act.isCritical ? '🔴 Sí' : '🟢 No');
+                tdCrit.style.fontSize = '0.8em';
+                tr.appendChild(tdCrit);
+                
+                tbody.appendChild(tr);
+            });
+        }
+
+        function buildNodeMap() {
+            const nodeMap = {};
+            let nodeCounter = 2;
+            const dummyArrows = [];
+
+            const topoSorted = [];
+            const visited = new Set();
+            const tempVisited = new Set();
+
+            function visit(task) {
+                if (tempVisited.has(task.letter)) return;
+                if (visited.has(task.letter)) return;
+                tempVisited.add(task.letter);
+                task.antecedents.forEach(ant => {
+                    const antTask = tasks.find(t => t.letter === ant);
+                    if (antTask) visit(antTask);
+                });
+                tempVisited.delete(task.letter);
+                visited.add(task.letter);
+                topoSorted.push(task);
+            }
+            tasks.forEach(t => visit(t));
+
+            topoSorted.sort((a, b) => a.letter.localeCompare(b.letter));
+
+            topoSorted.forEach(task => {
+                if (task.antecedents.length === 0) {
+                    nodeMap[task.letter] = { start: 1, end: nodeCounter++ };
+                } else {
+                    const antEndNodes = [];
+                    task.antecedents.forEach(ant => {
+                        if (nodeMap[ant]) antEndNodes.push(nodeMap[ant].end);
+                    });
+
+                    const uniqueEndNodes = [...new Set(antEndNodes)];
+
+                    if (uniqueEndNodes.length === 1) {
+                        nodeMap[task.letter] = { start: uniqueEndNodes[0], end: nodeCounter++ };
+                    } else {
+                        const convergenceNode = Math.max(...uniqueEndNodes);
+                        uniqueEndNodes.forEach(endNode => {
+                            if (endNode !== convergenceNode) {
+                                const exists = dummyArrows.some(d => d.from === endNode && d.to === convergenceNode);
+                                if (!exists) {
+                                    dummyArrows.push({ from: endNode, to: convergenceNode });
+                                }
+                            }
+                        });
+                        nodeMap[task.letter] = { start: convergenceNode, end: nodeCounter++ };
+                    }
+                }
+            });
+
+            const allAntecedents = new Set();
+            tasks.forEach(t => t.antecedents.forEach(a => allAntecedents.add(a)));
+            const leafTasks = tasks.filter(t => !allAntecedents.has(t.letter));
+
+            const finalNode = nodeCounter++;
+            nodeMap['__END__'] = { start: finalNode, end: finalNode };
+
+            if (leafTasks.length === 1) {
+                const leaf = leafTasks[0];
+                nodeMap[leaf.letter].end = finalNode;
+            } else {
+                leafTasks.forEach(leaf => {
+                    const leafEnd = nodeMap[leaf.letter].end;
+                    if (leafEnd !== finalNode) {
+                        const exists = dummyArrows.some(d => d.from === leafEnd && d.to === finalNode);
+                        if (!exists) {
+                            dummyArrows.push({ from: leafEnd, to: finalNode });
+                        }
+                    }
+                });
+            }
+
+            nodeMap.__dummies__ = dummyArrows;
+            return nodeMap;
+        }
+
+        function calculateCPM() {
+            if (tasks.length === 0) return;
+            
+            tasks.forEach(t => {
+                t.duration = isNaN(parseFloat(t.duration)) ? 0 : parseFloat(t.duration);
+                t.te = 0; t.tl = 0; t.teFin = 0; t.tlFin = 0; t.holgura = null; t.isCritical = false;
+            });
+
+            const sorted = [...tasks].sort((a, b) => a.letter.localeCompare(b.letter));
+            const TE = {}, TL = {};
+            const processedF = new Set();
+            
+            const processForward = (task) => {
+                if (processedF.has(task.letter)) return;
+                let maxTEInicio = 0;
+                task.antecedents.forEach(antLetter => {
+                    const antTask = tasks.find(t => t.letter === antLetter);
+                    if (antTask) { 
+                        processForward(antTask); 
+                        const antTEFin = isNaN(TE[antLetter]) ? 0 : TE[antLetter];
+                        maxTEInicio = Math.max(maxTEInicio, antTEFin); 
+                    }
+                });
+                TE[task.letter] = maxTEInicio + task.duration;
+                processedF.add(task.letter);
+            };
+            sorted.forEach(t => processForward(t));
+            
+            let projectDuration = 0;
+            sorted.forEach(t => { 
+                const teFin = isNaN(TE[t.letter]) ? 0 : TE[t.letter];
+                projectDuration = Math.max(projectDuration, teFin); 
+            });
+            
+            const processedB = new Set();
+            const processBackward = (task) => {
+                if (processedB.has(task.letter)) return;
+                if (task.precedents.length === 0) {
+                    TL[task.letter] = projectDuration;
+                } else {
+                    let minTL = Infinity;
+                    task.precedents.forEach(sucLetter => {
+                        const sucTask = tasks.find(t => t.letter === sucLetter);
+                        if (sucTask) {
+                            processBackward(sucTask);
+                            const sucTLFin = isNaN(TL[sucLetter]) ? projectDuration : TL[sucLetter];
+                            const sucDur = isNaN(sucTask.duration) ? 0 : sucTask.duration;
+                            const tlInicioSucesor = sucTLFin - sucDur;
+                            minTL = Math.min(minTL, tlInicioSucesor);
+                        }
+                    });
+                    TL[task.letter] = minTL === Infinity ? projectDuration : minTL;
+                }
+                processedB.add(task.letter);
+            };
+            sorted.forEach(t => processBackward(t));
+            
+            sorted.forEach(task => {
+                task.teFin = isNaN(TE[task.letter]) ? 0 : TE[task.letter];
+                task.tlFin = isNaN(TL[task.letter]) ? projectDuration : TL[task.letter];
+                task.te = task.teFin - task.duration;
+                task.tl = task.tlFin - task.duration;
+                task.holgura = task.tlFin - task.teFin;
+                task.isCritical = Math.abs(task.holgura) < 0.5; 
+            });
+        }
+
+        // ============ RENDER DE NODOS (DISPATCH POR MODO) ============
+        function renderNodes() {
+            const content = document.getElementById('canvas-content');
+            const existingNodes = content.querySelectorAll('.node');
+            existingNodes.forEach(n => n.remove());
+            document.getElementById('arrows-group').innerHTML = '';
+            if (tasks.length === 0) return;
+
+            if (diagramMode === 'AON') renderNodesAON(content);
+            else renderNodesAOA(content);
+
+            if (isInspectMode) setTimeout(() => attachInspectListeners(), 100);
+        }
+
+        // ---------- MODO AON: un nodo por actividad, SIN ficticias ----------
+        function renderNodesAON(content) {
+            const sortedLetters = tasks.map(t => t.letter).sort();
+            let projectDuration = 0;
+            tasks.forEach(t => { if (t.teFin !== undefined) projectDuration = Math.max(projectDuration, t.teFin); });
+
+            // Calcular niveles topológicos para el layout
+            const levelCache = {};
+            function levelOf(letter) {
+                if (levelCache[letter] !== undefined) return levelCache[letter];
+                const task = tasks.find(t => t.letter === letter);
+                if (!task || task.antecedents.length === 0) { levelCache[letter] = 0; return 0; }
+                let m = 0;
+                task.antecedents.forEach(a => { m = Math.max(m, levelOf(a) + 1); });
+                levelCache[letter] = m;
+                return m;
+            }
+            const levels = {};
+            sortedLetters.forEach(l => { levels[l] = levelOf(l); });
+            const maxLevel = Math.max(...Object.values(levels));
+
+            // Agrupar por nivel para repartir verticalmente
+            const byLevel = {};
+            for (let i = 0; i <= maxLevel; i++) byLevel[i] = [];
+            sortedLetters.forEach(l => byLevel[levels[l]].push(l));
+
+            const colSpacing = 260;
+            const rowSpacing = 150;
+            const startX = 100;
+            const centerY = 400;
+
+            const P = pos();
+            P[START_NODE_ID] = { x: startX, y: centerY };
+            P[END_NODE_ID] = { x: startX + (maxLevel + 2) * colSpacing, y: centerY };
+            for (let i = 0; i <= maxLevel; i++) {
+                const group = byLevel[i];
+                group.forEach((l, idx) => {
+                    if (!P[l]) {
+                        P[l] = { x: startX + (i + 1) * colSpacing, y: centerY - ((group.length - 1) * rowSpacing / 2) + idx * rowSpacing };
+                    }
+                });
+            }
+
+            function createNodeHTML(id, displayId, teVal, tlVal, isCritical, isStart, isEnd) {
+                const classes = ['node'];
+                if (isCritical) classes.push('critical');
+                if (isStart) classes.push('start-node');
+                if (isEnd) classes.push('end-node');
+                const p = P[id.replace('node-', '')];
+                const left = p ? p.x - NODE_RADIUS : 0;
+                const top = p ? p.y - NODE_RADIUS : 0;
+                return `
+                    <div class="${classes.join(' ')}" id="${id}" style="left:${left}px; top:${top}px;">
+                        <div class="node-left"><span class="node-id">${displayId}</span></div>
+                        <div class="node-right-top"><span class="node-te-val">${formatTime(teVal)}</span><span class="node-te-label">TE</span></div>
+                        <div class="node-right-bottom"><span class="node-tl-val">${formatTime(tlVal)}</span><span class="node-tl-label">TL</span></div>
+                    </div>
+                `;
+            }
+
+            const startEl = document.createElement('div');
+            startEl.innerHTML = createNodeHTML('node-' + START_NODE_ID, 'IN', '0', '0', false, true, false);
+            attachDrag(startEl.firstElementChild);
+            content.appendChild(startEl.firstElementChild);
+
+            tasks.forEach((task) => {
+                const nodeEl = document.createElement('div');
+                nodeEl.innerHTML = createNodeHTML('node-' + task.letter, task.letter, task.teFin, task.tlFin, task.isCritical, false, false);
+                attachDrag(nodeEl.firstElementChild);
+                content.appendChild(nodeEl.firstElementChild);
+            });
+
+            const endEl = document.createElement('div');
+            endEl.innerHTML = createNodeHTML('node-' + END_NODE_ID, 'FIN', projectDuration, projectDuration, false, false, true);
+            attachDrag(endEl.firstElementChild);
+            content.appendChild(endEl.firstElementChild);
+
+            drawArrowsAON();
+        }
+
+        function drawArrowsAON() {
+            const arrowsGroup = document.getElementById('arrows-group');
+            arrowsGroup.innerHTML = '';
+            const P = pos();
+
+            // INICIO -> tareas sin antecedentes
+            tasks.filter(t => t.antecedents.length === 0).forEach(task => {
+                const from = P[START_NODE_ID], to = P[task.letter];
+                if (from && to) drawArrow(from, to, task, task.isCritical, false, task.letter, false);
+            });
+
+            // Antecedente -> tarea (dependencias REALES, sólidas, SIN ficticias)
+            tasks.forEach(task => {
+                task.antecedents.forEach(antLetter => {
+                    const antTask = tasks.find(t => t.letter === antLetter);
+                    const from = P[antLetter], to = P[task.letter];
+                    if (antTask && from && to) {
+                        const isCrit = task.isCritical && antTask.isCritical;
+                        drawArrow(from, to, task, isCrit, false, task.letter, false);
+                    }
+                });
+            });
+
+            // Tareas sin sucesores -> FIN
+            tasks.filter(t => t.precedents.length === 0).forEach(task => {
+                const from = P[task.letter], to = P[END_NODE_ID];
+                if (from && to) drawArrow(from, to, task, task.isCritical, false, task.letter, false);
+            });
+        }
+
+        // ---------- MODO AOA: nodos = eventos numerados, flechas = actividades ----------
+        function renderNodesAOA(content) {
+            const { aoaActivities, nodeTE, nodeTL } = getAOAData();
+            const P = pos();
+
+            // Recolectar todos los números de evento
+            const eventNums = new Set();
+            aoaActivities.forEach(a => { eventNums.add(a.start); eventNums.add(a.end); });
+            const sortedNums = Array.from(eventNums).sort((a, b) => a - b);
+
+            const colSpacing = 260;
+            const startX = 100;
+            const centerY = 400;
+
+            sortedNums.forEach((num, idx) => {
+                const key = 'E' + num;
+                if (!P[key]) P[key] = { x: startX + idx * colSpacing, y: centerY };
+            });
+
+            function createEventNodeHTML(num) {
+                const te = nodeTE[num] !== undefined ? nodeTE[num] : 0;
+                const tl = nodeTL[num] !== undefined ? nodeTL[num] : 0;
+                const isCrit = Math.abs(tl - te) < 0.5;
+                const isStart = num === 1;
+                const isEnd = num === sortedNums[sortedNums.length - 1];
+                const classes = ['node'];
+                if (isCrit) classes.push('critical');
+                if (isStart) classes.push('start-node');
+                if (isEnd) classes.push('end-node');
+                const p = P['E' + num];
+                return `
+                    <div class="${classes.join(' ')}" id="node-E${num}" style="left:${p.x - NODE_RADIUS}px; top:${p.y - NODE_RADIUS}px;">
+                        <div class="node-left"><span class="node-id">${num}</span></div>
+                        <div class="node-right-top"><span class="node-te-val">${formatTime(te)}</span><span class="node-te-label">TE</span></div>
+                        <div class="node-right-bottom"><span class="node-tl-val">${formatTime(tl)}</span><span class="node-tl-label">TL</span></div>
+                    </div>
+                `;
+            }
+
+            sortedNums.forEach(num => {
+                const el = document.createElement('div');
+                el.innerHTML = createEventNodeHTML(num);
+                attachDrag(el.firstElementChild);
+                content.appendChild(el.firstElementChild);
+            });
+
+            drawArrowsAOA(aoaActivities);
+        }
+
+        function drawArrowsAOA(aoaActivities) {
+            const arrowsGroup = document.getElementById('arrows-group');
+            arrowsGroup.innerHTML = '';
+            const P = pos();
+
+            aoaActivities.forEach(act => {
+                if (act.type === 'ficticia' && !showDummies) return;
+                const from = P['E' + act.start];
+                const to = P['E' + act.end];
+                if (!from || !to) return;
+                if (act.type === 'ficticia') {
+                    drawArrow(from, to, { duration: 0, te: 0, tl: 0 }, false, true, 'Ficticia', false);
+                } else {
+                    drawArrow(from, to, act, act.isCritical, false, act.id, true);
+                }
+            });
+        }
+
+        function drawArrow(fromPos, toPos, task, isCritical, isDummy, targetLetter, showLabels) {
+            const arrowsGroup = document.getElementById('arrows-group');
+            const fromCx = fromPos.x, fromCy = fromPos.y, toCx = toPos.x, toCy = toPos.y;
+            const dx = toCx - fromCx, dy = toCy - fromCy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist === 0) return;
+
+            const unitX = dx / dist, unitY = dy / dist;
+            const startX = fromCx + unitX * NODE_RADIUS;
+            const startY = fromCy + unitY * NODE_RADIUS;
+            const endX = toCx - unitX * (NODE_RADIUS + 2);
+            const endY = toCy - unitY * (NODE_RADIUS + 2);
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.style.cursor = 'help';
+
+            const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            hitLine.setAttribute('x1', startX); hitLine.setAttribute('y1', startY);
+            hitLine.setAttribute('x2', endX); hitLine.setAttribute('y2', endY);
+            hitLine.setAttribute('stroke', 'transparent'); hitLine.setAttribute('stroke-width', '18');
+            g.appendChild(hitLine);
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', startX); line.setAttribute('y1', startY);
+            line.setAttribute('x2', endX); line.setAttribute('y2', endY);
+            if (isDummy) line.setAttribute('class', 'arrow-line dummy');
+            else if (isCritical) line.setAttribute('class', 'arrow-line critical');
+            else line.setAttribute('class', 'arrow-line');
+            g.appendChild(line);
+
+            if (showLabels) {
+                const midX = (startX + endX) / 2, midY = (startY + endY) / 2;
+                const durationLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                durationLabel.setAttribute('x', midX); durationLabel.setAttribute('y', midY - 10);
+                durationLabel.setAttribute('class', 'arrow-label-duration');
+                durationLabel.textContent = formatTime(task.duration);
+                g.appendChild(durationLabel);
+
+                if (targetLetter) {
+                    const activityLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    activityLabel.setAttribute('x', midX); activityLabel.setAttribute('y', midY + 18);
+                    activityLabel.setAttribute('class', 'arrow-label-activity');
+                    activityLabel.textContent = targetLetter;
+                    g.appendChild(activityLabel);
+                    
+                    const eslsLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    eslsLabel.setAttribute('x', midX); eslsLabel.setAttribute('y', midY + 35);
+                    eslsLabel.setAttribute('class', 'arrow-label-es-ls');
+                    eslsLabel.textContent = `ES:${formatTime(task.ES !== undefined ? task.ES : task.te)}, LS:${formatTime(task.LS !== undefined ? task.LS : task.tl)}`;
+                    g.appendChild(eslsLabel);
+                }
+            }
+            arrowsGroup.appendChild(g);
+        }
+
+        function attachDrag(node) {
+            node.addEventListener('touchstart', startDragTouch, { passive: false });
+            node.addEventListener('mousedown', startDrag);
+        }
+
+        viewport.addEventListener('mousedown', e => {
+            if (e.target.closest('.node')) return;
+            isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
+            viewport.style.cursor = isInspectMode ? 'zoom-in' : 'grabbing';
+        });
+        viewport.addEventListener('touchstart', e => {
+            if (e.target.closest('.node')) return;
+            if (e.touches.length === 1) { isPanning = true; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; } 
+            else if (e.touches.length === 2) { isPanning = false; initialPinchDistance = getPinchDistance(e.touches); initialScale = scale; }
+        }, { passive: false });
+
+        window.addEventListener('mousemove', e => {
+            if (isPanning) { e.preventDefault(); panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateTransform(); }
+            if (draggedNode) onDrag(e);
+        });
+        window.addEventListener('touchmove', e => {
+            if (e.touches.length === 1 && isPanning) { e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY; updateTransform(); } 
+            else if (e.touches.length === 2 && !isPanning) { e.preventDefault(); scale = Math.min(Math.max(0.3, initialScale * (getPinchDistance(e.touches) / initialPinchDistance)), 3); updateTransform(); }
+            if (draggedNode) onDragTouch(e);
+        }, { passive: false });
+
+        window.addEventListener('mouseup', () => { isPanning = false; viewport.style.cursor = isInspectMode ? 'zoom-in' : 'grab'; stopDrag(); });
+        window.addEventListener('touchend', () => { isPanning = false; stopDrag(); });
+
+        viewport.addEventListener('wheel', e => {
+            e.preventDefault(); scale = Math.min(Math.max(0.3, scale + (e.deltaY > 0 ? -0.1 : 0.1)), 3); updateTransform(); saveData();
+        }, { passive: false });
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && isInspectMode) toggleInspectMode();
+        });
+
+        function getPinchDistance(touches) { 
+            return Math.sqrt(Math.pow(touches[0].clientX - touches[1].clientX, 2) + Math.pow(touches[0].clientY - touches[1].clientY, 2)); 
+        }
+        function startDrag(e) {
+            e.preventDefault(); e.stopPropagation(); 
+            draggedNode = e.currentTarget;
+            const rect = draggedNode.getBoundingClientRect();
+            dragOffsetX = (e.clientX - rect.left) / scale; 
+            dragOffsetY = (e.clientY - rect.top) / scale;
+        }
+        function startDragTouch(e) {
+            e.preventDefault(); e.stopPropagation(); 
+            draggedNode = e.currentTarget;
+            const rect = draggedNode.getBoundingClientRect(); 
+            const touch = e.touches[0];
+            dragOffsetX = (touch.clientX - rect.left) / scale; 
+            dragOffsetY = (touch.clientY - rect.top) / scale;
+        }
+        function onDrag(e) {
+            if (!draggedNode) return;
+            const viewportRect = viewport.getBoundingClientRect();
+            let x = (e.clientX - viewportRect.left - panX) / scale - dragOffsetX + NODE_RADIUS;
+            let y = (e.clientY - viewportRect.top - panY) / scale - dragOffsetY + NODE_RADIUS;
+            draggedNode.style.left = (x - NODE_RADIUS) + 'px'; 
+            draggedNode.style.top = (y - NODE_RADIUS) + 'px';
+            pos()[draggedNode.id.replace('node-', '')] = { x, y };
+            redrawArrowsOnly();
+        }
+        function onDragTouch(e) {
+            if (!draggedNode) return;
+            const touch = e.touches[0]; 
+            const viewportRect = viewport.getBoundingClientRect();
+            let x = (touch.clientX - viewportRect.left - panX) / scale - dragOffsetX + NODE_RADIUS;
+            let y = (touch.clientY - viewportRect.top - panY) / scale - dragOffsetY + NODE_RADIUS;
+            draggedNode.style.left = (x - NODE_RADIUS) + 'px'; 
+            draggedNode.style.top = (y - NODE_RADIUS) + 'px';
+            pos()[draggedNode.id.replace('node-', '')] = { x, y };
+            redrawArrowsOnly();
+        }
+        function redrawArrowsOnly() {
+            if (diagramMode === 'AON') drawArrowsAON();
+            else {
+                const { aoaActivities } = getAOAData();
+                drawArrowsAOA(aoaActivities);
+            }
+            if (isInspectMode) setTimeout(() => attachInspectListeners(), 50);
+        }
+        function stopDrag() {
+            if (draggedNode) saveData();
+            draggedNode = null;
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+        window.addEventListener('resize', () => { if (tasks.length > 0) { renderNodes(); centerDiagram(); } });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateModeButtonUI();
+            updateDummyButtonUI();
+            if (!loadData()) centerDiagram();
+        });
+    </script>
+</body>
+</html>
